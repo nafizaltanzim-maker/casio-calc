@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Casio 100MS Calculator</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      touch-action: manipulation;
+    }
+
+    .calculator {
+      width: min(100vw, 400px);
+      min-height: 100vh;
+      background: #16213e;
+      border-radius: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.6);
+    }
+
+    /* Header / Brand */
+    .brand {
+      text-align: center;
+      color: #e0e0e0;
+      letter-spacing: 3px;
+      font-size: 13px;
+      padding: 6px 0 0 0;
+      text-transform: uppercase;
+    }
+    .brand span {
+      color: #0f3460;
+      font-size: 10px;
+      display: block;
+      letter-spacing: 6px;
+    }
+
+    /* Display */
+    .display-wrapper {
+      background: #c8d5a3;
+      border-radius: 6px;
+      padding: 10px 14px 8px;
+      border: 2px solid #a0ae7a;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .display-expression {
+      font-size: 14px;
+      color: #4a5a2a;
+      text-align: right;
+      min-height: 20px;
+      word-break: break-all;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .display-result {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1a2a0a;
+      text-align: right;
+      word-break: break-all;
+      line-height: 1.1;
+    }
+
+    .display-mode {
+      font-size: 11px;
+      color: #4a5a2a;
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Buttons */
+    .btn-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      flex: 1;
+    }
+
+    button {
+      flex: 1;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      transition: all 0.08s ease;
+      position: relative;
+      padding: 0;
+      min-height: 48px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active {
+      transform: scale(0.93);
+      filter: brightness(0.75);
+    }
+
+    /* Button color themes */
+    .btn-num {
+      background: #2a3550;
+      color: #ffffff;
+      border-bottom: 3px solid #1a2540;
+    }
+
+    .btn-op {
+      background: #0f3460;
+      color: #e0e0e0;
+      border-bottom: 3px solid #0a2040;
+    }
+
+    .btn-eq {
+      background: #e94560;
+      color: #fff;
+      border-bottom: 3px solid #c03050;
+      font-size: 18px;
+    }
+
+    .btn-fn {
+      background: #1a3a4a;
+      color: #89d4cf;
+      border-bottom: 3px solid #0a2a3a;
+      font-size: 12px;
+    }
+
+    .btn-clear {
+      background: #c0392b;
+      color: #fff;
+      border-bottom: 3px solid #922b21;
+    }
+
+    .btn-shift {
+      background: #2ecc71;
+      color: #000;
+      border-bottom: 3px solid #1aaa55;
+      font-size: 11px;
+    }
+
+    /* sub-label above button */
+    button .sub {
+      display: block;
+      font-size: 9px;
+      color: #89d4cf;
+      position: absolute;
+      top: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .btn-num .sub, .btn-eq .sub { color: #89d4cf; }
+
+    /* History panel */
+    .history {
+      background: #0d1b2a;
+      border-radius: 5px;
+      padding: 6px 10px;
+      max-height: 60px;
+      overflow-y: auto;
+      font-size: 11px;
+      color: #7a8a9a;
+    }
+    .history div { text-align: right; border-bottom: 1px solid #1a2a3a; padding: 2px 0; }
+  </style>
+</head>
+<body>
+
+<div class="calculator">
+  <div class="brand">
+    CASIO<br/>
+    <span>fx‑100MS</span>
+  </div>
+
+  <div class="display-wrapper">
+    <div class="display-mode">
+      <span id="modeLabel">DEG</span>
+      <span id="shiftLabel"></span>
+    </div>
+    <div class="display-expression" id="expr">0</div>
+    <div class="display-result" id="result"></div>
+  </div>
+
+  <div class="history" id="history"></div>
+
+  <div class="btn-grid" id="btnGrid"></div>
+</div>
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  let expr = '';
+  let lastResult = '';
+  let shift = false;        // SHIFT mode
+  let angleMode = 'DEG';   // DEG | RAD | GRAD
+  let historyList = [];
+
+  // ─── Button layout ───────────────────────────────────────────────────────
+  // Each item: [label, type, shiftLabel (optional)]
+  const rows = [
+    [
+      { l:'SHIFT', t:'btn-shift' },
+      { l:'MODE', t:'btn-fn' },
+      { l:'DEL', t:'btn-clear' },
+      { l:'AC', t:'btn-clear' },
+    ],
+    [
+      { l:'x²', t:'btn-fn', sl:'x³' },
+      { l:'√', t:'btn-fn', sl:'∛' },
+      { l:'log', t:'btn-fn', sl:'10ˣ' },
+      { l:'ln', t:'btn-fn', sl:'eˣ' },
+    ],
+    [
+      { l:'sin', t:'btn-fn', sl:'sin⁻¹' },
+      { l:'cos', t:'btn-fn', sl:'cos⁻¹' },
+      { l:'tan', t:'btn-fn', sl:'tan⁻¹' },
+      { l:'(', t:'btn-op' },
+    ],
+    [
+      { l:'π', t:'btn-fn' },
+      { l:'e', t:'btn-fn' },
+      { l:'%', t:'btn-op' },
+      { l:')', t:'btn-op' },
+    ],
+    [
+      { l:'7', t:'btn-num' },
+      { l:'8', t:'btn-num' },
+      { l:'9', t:'btn-num' },
+      { l:'÷', t:'btn-op' },
+    ],
+    [
+      { l:'4', t:'btn-num' },
+      { l:'5', t:'btn-num' },
+      { l:'6', t:'btn-num' },
+      { l:'×', t:'btn-op' },
+    ],
+    [
+      { l:'1', t:'btn-num' },
+      { l:'2', t:'btn-num' },
+      { l:'3', t:'btn-num' },
+      { l:'-', t:'btn-op' },
+    ],
+    [
+      { l:'0', t:'btn-num' },
+      { l:'.', t:'btn-num' },
+      { l:'+/-', t:'btn-num' },
+      { l:'+', t:'btn-op' },
+    ],
+    [
+      { l:'ANS', t:'btn-fn' },
+      { l:'^', t:'btn-op' },
+      { l:'=', t:'btn-eq' },
+    ],
+  ];
+
+  // ─── Build UI ─────────────────────────────────────────────────────────────
+  const grid = document.getElementById('btnGrid');
+  rows.forEach(row => {
+    const r = document.createElement('div');
+    r.className = 'btn-row';
+    row.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = b.t;
+      btn.textContent = b.l;
+      if (b.sl) {
+        const sub = document.createElement('span');
+        sub.className = 'sub';
+        sub.textContent = b.sl;
+        btn.appendChild(sub);
+      }
+      btn.addEventListener('click', () => handleBtn(b.l, b.sl));
+      r.appendChild(btn);
+    });
+    grid.appendChild(r);
+  });
+
+  // ─── Display update ───────────────────────────────────────────────────────
+  function updateDisplay() {
+    document.getElementById('expr').textContent = expr || '0';
+    document.getElementById('result').textContent = lastResult;
+    document.getElementById('shiftLabel').textContent = shift ? 'SHIFT' : '';
+    document.getElementById('modeLabel').textContent = angleMode;
+  }
+
+  // ─── Handle button click ──────────────────────────────────────────────────
+  function handleBtn(label, shiftLabel) {
+    const effectiveLabel = shift && shiftLabel ? shiftLabel : label;
+    shift = false; // reset shift after use (unless clicking SHIFT again)
+
+    switch(effectiveLabel) {
+      case 'SHIFT':
+        shift = true;
+        updateDisplay();
+        return;
+
+      case 'MODE':
+        const modes = ['DEG', 'RAD', 'GRAD'];
+        angleMode = modes[(modes.indexOf(angleMode) + 1) % modes.length];
+        updateDisplay();
+        return;
+
+      case 'AC':
+        expr = '';
+        lastResult = '';
+        updateDisplay();
+        return;
+
+      case 'DEL':
+        expr = expr.slice(0, -1);
+        updateDisplay();
+        return;
+
+      case '=':
+        if (expr === '') return;
+        try {
+          const r = compute(expr);
+          historyList.unshift(expr + ' = ' + r);
+          if (historyList.length > 10) historyList.pop();
+          renderHistory();
+          lastResult = r;
+          expr = r;
+        } catch(e) {
+          lastResult = 'Error';
+          expr = '';
+        }
+        updateDisplay();
+        return;
+
+      case 'ANS':
+        expr += lastResult || '0';
+        break;
+
+      case '+/-':
+        if (expr.startsWith('-')) expr = expr.slice(1);
+        else expr = '-' + expr;
+        break;
+
+      case 'π':
+        expr += 'π';
+        break;
+
+      case 'e':
+        expr += 'e';
+        break;
+
+      case 'x²':
+        expr += '^2';
+        break;
+
+      case 'x³':
+        expr += '^3';
+        break;
+
+      case '√':
+        expr += '√(';
+        break;
+
+      case '∛':
+        expr += '∛(';
+        break;
+
+      case 'log':
+        expr += 'log(';
+        break;
+
+      case '10ˣ':
+        expr += '10^(';
+        break;
+
+      case 'ln':
+        expr += 'ln(';
+        break;
+
+      case 'eˣ':
+        expr += 'e^(';
+        break;
+
+      case 'sin':
+        expr += 'sin(';
+        break;
+
+      case 'sin⁻¹':
+        expr += 'asin(';
+        break;
+
+      case 'cos':
+        expr += 'cos(';
+        break;
+
+      case 'cos⁻¹':
+        expr += 'acos(';
+        break;
+
+      case 'tan':
+        expr += 'tan(';
+        break;
+
+      case 'tan⁻¹':
+        expr += 'atan(';
+        break;
+
+      default:
+        expr += effectiveLabel;
+    }
+
+    lastResult = '';
+    updateDisplay();
+  }
+
+  // ─── History ─────────────────────────────────────────────────────────────
+  function renderHistory() {
+    const h = document.getElementById('history');
+    h.innerHTML = historyList.map(x => `<div>${x}</div>`).join('');
+  }
+
+  // ─── Math engine ──────────────────────────────────────────────────────────
+  // Tokenise → recursive descent parse → evaluate
+  function compute(raw) {
+    const src = preprocess(raw);
+    const tokens = tokenize(src);
+    const parser = new Parser(tokens);
+    const val = parser.parseExpr();
+    if (parser.pos !== tokens.length) throw new Error('Unexpected token');
+    if (!isFinite(val)) throw new Error('Math error');
+    // Format
+    if (Number.isInteger(val) && Math.abs(val) < 1e15) return String(val);
+    return parseFloat(val.toPrecision(10)).toString();
+  }
+
+  function preprocess(s) {
+    return s
+      .replace(/π/g, '(3.14159265358979323846)')
+      .replace(/e(?![^(]*\))/g, '(2.71828182845904523536)')
+      .replace(/÷/g, '/')
+      .replace(/×/g, '*')
+      .replace(/∛\(/g, 'cbrt(')
+      .replace(/√\(/g, 'sqrt(')
+      .replace(/%/g, '/100');
+  }
+
+  function tokenize(s) {
+    const toks = [];
+    let i = 0;
+    while (i < s.length) {
+      if (/\s/.test(s[i])) { i++; continue; }
+      if (/\d|\./.test(s[i])) {
+        let num = '';
+        while (i < s.length && /[\d.]/.test(s[i])) num += s[i++];
+        toks.push({ type: 'NUM', val: parseFloat(num) });
+      } else if (/[a-z]/.test(s[i])) {
+        let fn = '';
+        while (i < s.length && /[a-z]/.test(s[i])) fn += s[i++];
+        toks.push({ type: 'FN', val: fn });
+      } else {
+        toks.push({ type: 'OP', val: s[i++] });
+      }
+    }
+    return toks;
+  }
+
+  class Parser {
+    constructor(toks) { this.toks = toks; this.pos = 0; }
+    peek() { return this.toks[this.pos]; }
+    consume() { return this.toks[this.pos++]; }
+
+    parseExpr() {
+      let left = this.parseTerm();
+      while (this.peek() && (this.peek().val === '+' || this.peek().val === '-')) {
+        const op = this.consume().val;
+        const right = this.parseTerm();
+        left = op === '+' ? left + right : left - right;
+      }
+      return left;
+    }
+
+    parseTerm() {
+      let left = this.parsePow();
+      while (this.peek() && (this.peek().val === '*' || this.peek().val === '/')) {
+        const op = this.consume().val;
+        const right = this.parsePow();
+        left = op === '*' ? left * right : left / right;
+      }
+      return left;
+    }
+
+    parsePow() {
+      let base = this.parseUnary();
+      if (this.peek() && this.peek().val === '^') {
+        this.consume();
+        const exp = this.parsePow(); // right assoc
+        return Math.pow(base, exp);
+      }
+      return base;
+    }
+
+    parseUnary() {
+      if (this.peek() && this.peek().val === '-') {
+        this.consume();
+        return -this.parsePrimary();
+      }
+      if (this.peek() && this.peek().val === '+') {
+        this.consume();
+        return this.parsePrimary();
+      }
+      return this.parsePrimary();
+    }
+
+    parsePrimary() {
+      const tok = this.peek();
+      if (!tok) throw new Error('Unexpected end');
+
+      if (tok.type === 'NUM') { this.consume(); return tok.val; }
+
+      if (tok.type === 'FN') {
+        this.consume();
+        // expect '('
+        if (!this.peek() || this.peek().val !== '(') throw new Error('Expected (');
+        this.consume();
+        const arg = this.parseExpr();
+        if (!this.peek() || this.peek().val !== ')') throw new Error('Expected )');
+        this.consume();
+        return applyFn(tok.val, arg);
+      }
+
+      if (tok.val === '(') {
+        this.consume();
+        const val = this.parseExpr();
+        if (!this.peek() || this.peek().val !== ')') throw new Error('Expected )');
+        this.consume();
+        return val;
+      }
+
+      throw new Error('Unexpected token: ' + tok.val);
+    }
+  }
+
+  function toAngle(v) {
+    if (angleMode === 'DEG')  return v * Math.PI / 180;
+    if (angleMode === 'GRAD') return v * Math.PI / 200;
+    return v; // RAD
+  }
+
+  function fromAngle(v) {
+    if (angleMode === 'DEG')  return v * 180 / Math.PI;
+    if (angleMode === 'GRAD') return v * 200 / Math.PI;
+    return v;
+  }
+
+  function applyFn(fn, x) {
+    switch(fn) {
+      case 'sin':  return Math.sin(toAngle(x));
+      case 'cos':  return Math.cos(toAngle(x));
+      case 'tan':  return Math.tan(toAngle(x));
+      case 'asin': return fromAngle(Math.asin(x));
+      case 'acos': return fromAngle(Math.acos(x));
+      case 'atan': return fromAngle(Math.atan(x));
+      case 'log':  return Math.log10(x);
+      case 'ln':   return Math.log(x);
+      case 'sqrt': return Math.sqrt(x);
+      case 'cbrt': return Math.cbrt(x);
+      case 'abs':  return Math.abs(x);
+      default: throw new Error('Unknown fn: ' + fn);
+    }
+  }
+
+  // ─── Service Worker registration (PWA offline) ───────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  updateDisplay();
+</script>
+</body>
+</html>

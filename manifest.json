@@ -1,0 +1,22 @@
+{
+  "name": "Casio 100MS Calculator",
+  "short_name": "Casio Calc",
+  "description": "A Casio fx-100MS style scientific calculator",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
